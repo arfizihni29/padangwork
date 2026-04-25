@@ -11,7 +11,8 @@ const URLS = [
     'https://glints.com/id/opportunities/jobs/explore?country=ID&locationId=5e666aa8-abfd-4d4a-a02e-2caaef368a09&locationName=Padang%2C+Sumatera+Barat&lowestLocationLevel=3&sortBy=LATEST',
     'https://id.jobstreet.com/id/jobs/in-Sumatera-Barat',
     'https://id.jobstreet.com/id/jobs/in-Sumatera-Barat?tags=new',
-    'https://id.jobstreet.com/id/Admin-jobs/in-Sumatera-Barat?tags=new'
+    'https://id.jobstreet.com/id/Admin-jobs/in-Sumatera-Barat?tags=new',
+    'https://pintarnya.com/l-kota-padang-lowongan?sort=-published_at&search=&city_id=69&province_id=-1'
 ];
 
 async function sendFonnte(message) {
@@ -63,7 +64,9 @@ async function scrape() {
         try {
             await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
             
-            const jobs = await page.evaluate((isGlints) => {
+            const jobs = await page.evaluate((currentUrl) => {
+                const isGlints = currentUrl.includes('glints.com');
+                const isPintarnya = currentUrl.includes('pintarnya.com');
                 let results = [];
                 const links = document.querySelectorAll('a');
                 for (let a of links) {
@@ -75,6 +78,10 @@ async function scrape() {
                     let containerText = '';
                     if (isGlints) {
                         let card = a.closest('div[class*="JobCard"]');
+                        if (card) containerText = card.innerText.toLowerCase();
+                    } else if (isPintarnya) {
+                        // Pintarnya uses simple divs or cards
+                        let card = a.parentElement && a.parentElement.parentElement;
                         if (card) containerText = card.innerText.toLowerCase();
                     } else {
                         let article = a.closest('article');
@@ -109,6 +116,11 @@ async function scrape() {
                         if (href.includes('/opportunities/jobs/') && !href.includes('/explore')) {
                             results.push({ title: text.split('\n')[0], link: href });
                         }
+                    } else if (isPintarnya) {
+                        if (href.includes('/lowongan/')) {
+                            // pintarnya titles are sometimes separated by newline
+                            results.push({ title: text.split('\n')[0], link: href });
+                        }
                     } else {
                         if (href.includes('/job/')) {
                              results.push({ title: text, link: href });
@@ -116,7 +128,7 @@ async function scrape() {
                     }
                 }
                 return results;
-            }, url.includes('glints.com'));
+            }, url);
             
             allJobs = allJobs.concat(jobs);
         } catch (e) {
