@@ -115,8 +115,17 @@ async function scrape() {
 
                     if (!isFresh) continue;
                     
-                    // Filter out 'sales' jobs
-                    if (containerText && containerText.includes('sales')) {
+                    // Filter out unwanted jobs
+                    if (containerText && (
+                        containerText.includes('sales') ||
+                        containerText.includes('penagihan') ||
+                        containerText.includes('field collection') ||
+                        containerText.includes('officeboy') ||
+                        containerText.includes('office boy') ||
+                        containerText.includes('cleaning service') ||
+                        containerText.includes('kolektor') ||
+                        containerText.includes('collector')
+                    )) {
                         continue;
                     }
                     
