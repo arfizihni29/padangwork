@@ -13,7 +13,8 @@ const URLS = [
     'https://id.jobstreet.com/id/jobs/in-Sumatera-Barat?tags=new',
     'https://id.jobstreet.com/id/Admin-jobs/in-Sumatera-Barat?tags=new',
     'https://pintarnya.com/l-kota-padang-lowongan?sort=-published_at&search=&city_id=69&province_id=-1',
-    'https://glints.com/id/opportunities/jobs/explore?country=ID&locationId=3c420344-8d9d-48a5-80e9-80e8a1617acd&locationName=Solok%2C+Sumatera+Barat&lowestLocationLevel=3&sortBy=LATEST'
+    'https://glints.com/id/opportunities/jobs/explore?country=ID&locationId=3c420344-8d9d-48a5-80e9-80e8a1617acd&locationName=Solok%2C+Sumatera+Barat&lowestLocationLevel=3&sortBy=LATEST',
+    'https://www.kitalulus.com/lowongan?sortBy=isHighlighted&location=Kota+Padang&gender=F'
 ];
 
 async function sendFonnte(message) {
@@ -68,6 +69,7 @@ async function scrape() {
             const jobs = await page.evaluate((currentUrl) => {
                 const isGlints = currentUrl.includes('glints.com');
                 const isPintarnya = currentUrl.includes('pintarnya.com');
+                const isKitaLulus = currentUrl.includes('kitalulus.com');
                 let results = [];
                 const links = document.querySelectorAll('a');
                 for (let a of links) {
@@ -84,6 +86,8 @@ async function scrape() {
                         // Pintarnya uses simple divs or cards
                         let card = a.parentElement && a.parentElement.parentElement;
                         if (card) rawContainerText = card.innerText;
+                    } else if (isKitaLulus) {
+                        rawContainerText = a.innerText;
                     } else {
                         let article = a.closest('article');
                         if (article) rawContainerText = article.innerText;
@@ -159,6 +163,10 @@ async function scrape() {
                     } else if (isPintarnya) {
                         if (href.includes('/lowongan/')) {
                             // pintarnya titles are sometimes separated by newline
+                            results.push({ title: text.split('\n')[0], link: href, salary });
+                        }
+                    } else if (isKitaLulus) {
+                        if (href.includes('/lowongan/')) {
                             results.push({ title: text.split('\n')[0], link: href, salary });
                         }
                     } else {
