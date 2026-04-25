@@ -1,0 +1,36 @@
+name: Hourly Job Scraper
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Runs every hour at minute 0
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run Scraper
+      env:
+        FONNTE_TARGET: ${{ secrets.FONNTE_TARGET }}
+      run: node index.js
+
+    - name: Commit and Push sent_jobs.json
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add sent_jobs.json
+        # Only commit if there are changes
+        git diff --quiet && git diff --staged --quiet || git commit -m "Update sent jobs history"
+        git push
