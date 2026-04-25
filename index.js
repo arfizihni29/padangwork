@@ -2,8 +2,8 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const axios = require('axios');
 
-const TELEGRAM_TOKEN = '8782098413:AAFkr5bCRBriLjl98Jdclf9e-QMIJQq0Y2k';
-const TELEGRAM_CHAT_ID = '392836663';
+const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
 const URLS = [
     'https://glints.com/id/opportunities/jobs/explore?keyword=admin&country=ID&locationId=5e666aa8-abfd-4d4a-a02e-2caaef368a09&locationName=Padang%2C+Sumatera+Barat&lowestLocationLevel=3&sortBy=LATEST',
