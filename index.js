@@ -129,6 +129,20 @@ async function scrape() {
                         continue;
                     }
                     
+                    // Filter out jobs meant strictly for males
+                    if (containerText && (
+                        containerText.includes('pria') || 
+                        containerText.includes('laki-laki') || 
+                        containerText.includes('laki laki') || 
+                        containerText.includes('cowok')
+                    )) {
+                        if (!containerText.includes('wanita') && 
+                            !containerText.includes('perempuan') && 
+                            !containerText.includes('cewek')) {
+                            continue; // It only asks for males, so skip
+                        }
+                    }
+                    
 
                     // Extract salary
                     let salary = 'Gaji tidak ditampilkan';
