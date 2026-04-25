@@ -2,8 +2,8 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const axios = require('axios');
 
-const FONNTE_TOKEN = 'v8422FEfwmCsbRhxHdw4';
-const TARGET_NUMBER = process.env.FONNTE_TARGET || '08xxxxxxxxx'; // <-- Ganti dengan nomor tujuan Fonnte
+const TELEGRAM_TOKEN = '8782098413:AAFkr5bCRBriLjl98Jdclf9e-QMIJQq0Y2k';
+const TELEGRAM_CHAT_ID = '392836663';
 
 const URLS = [
     'https://glints.com/id/opportunities/jobs/explore?keyword=admin&country=ID&locationId=5e666aa8-abfd-4d4a-a02e-2caaef368a09&locationName=Padang%2C+Sumatera+Barat&lowestLocationLevel=3&sortBy=LATEST',
@@ -21,26 +21,21 @@ const URLS = [
     'https://id.jobstreet.com/id/Admin-jobs/in-Padang-Sumatera-Barat?sortmode=ListedDate&tags=new'
 ];
 
-async function sendFonnte(message) {
-    if (TARGET_NUMBER === '08xxxxxxxxx' && !process.env.FONNTE_TARGET) {
-        console.log("Nomor target Fonnte belum diset. Melewati pengiriman pesan...");
+async function sendTelegram(message) {
+    if (!TELEGRAM_TOKEN || !TELEGRAM_CHAT_ID) {
+        console.log("Telegram Token atau Chat ID belum diset. Melewati pengiriman pesan...");
         return;
     }
     
     try {
-        const response = await axios.post('https://api.fonnte.com/send', {
-            target: TARGET_NUMBER,
-            message: message,
-            countryCode: '62'
-        }, {
-            headers: {
-                'Authorization': FONNTE_TOKEN,
-                'Content-Type': 'application/json'
-            }
+        const response = await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+            chat_id: TELEGRAM_CHAT_ID,
+            text: message,
+            parse_mode: 'Markdown'
         });
-        console.log('Fonnte Response:', response.data);
+        console.log('Telegram Response:', response.data.ok);
     } catch (error) {
-        console.error('Error sending to Fonnte:', error.response ? error.response.data : error.message);
+        console.error('Error sending to Telegram:', error.response ? error.response.data : error.message);
     }
 }
 
@@ -241,13 +236,14 @@ async function scrape() {
         
         for (let i = 0; i < newJobs.length; i++) {
             const job = newJobs[i];
-            message += `🏢 *${i+1}. ${job.title}*\n💰 ${job.salary || 'Gaji tidak ditampilkan'}\n🔗 ${job.cleanLink}\n\n`;
+            const safeTitle = job.title.replace(/[*_`\[\]]/g, '');
+            message += `🏢 *${i+1}. ${safeTitle}*\n💰 ${job.salary || 'Gaji tidak ditampilkan'}\n🔗 ${job.cleanLink}\n\n`;
             count++;
             
-            // Fonnte limit batch size to avoid overly long messages, bumped to 40 per bubble to keep it in one chat bubble mostly
+            // Telegram limit batch size to avoid overly long messages, bumped to 40 per bubble to keep it in one chat bubble mostly
             if (count % 40 === 0 || i === newJobs.length - 1) {
                 message += `\n🤖 _This bot was Created by Arfi_\n`;
-                await sendFonnte(message);
+                await sendTelegram(message);
                 
                 const nextQuote = quotes[Math.floor(Math.random() * quotes.length)];
                 message = `🚀 *${nextQuote} (LANJUTAN)* 🚀\n\n`;

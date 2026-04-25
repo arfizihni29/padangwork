@@ -24,8 +24,6 @@ jobs:
       run: npm install
 
     - name: Run Scraper
-      env:
-        FONNTE_TARGET: ${{ secrets.FONNTE_TARGET }}
       run: node index.js
 
     - name: Commit and Push sent_jobs.json
