@@ -14,7 +14,11 @@ const URLS = [
     'https://id.jobstreet.com/id/Admin-jobs/in-Sumatera-Barat?tags=new',
     'https://pintarnya.com/l-kota-padang-lowongan?sort=-published_at&search=&city_id=69&province_id=-1',
     'https://glints.com/id/opportunities/jobs/explore?country=ID&locationId=3c420344-8d9d-48a5-80e9-80e8a1617acd&locationName=Solok%2C+Sumatera+Barat&lowestLocationLevel=3&sortBy=LATEST',
-    'https://www.kitalulus.com/lowongan?sortBy=isHighlighted&location=Kota+Padang&gender=F'
+    'https://www.kitalulus.com/lowongan?sortBy=isHighlighted&location=Kota+Padang&gender=F',
+    'https://glints.com/id/opportunities/jobs/explore?keyword=Admin&country=ID&locationId=16cbbddf-c3fe-4ca5-a8ff-08ae52c9f085&locationName=Sumatera+Barat&lowestLocationLevel=2&sortBy=LATEST',
+    'https://glints.com/id/opportunities/jobs/explore?keyword=Admin&country=ID&locationId=f34ea55b-a896-4156-8477-5db45491bac6&locationName=Jambi&lowestLocationLevel=2&sortBy=LATEST',
+    'https://glints.com/id/opportunities/jobs/explore?keyword=Admin&country=ID&locationId=5738028d-c59b-402e-93ba-a289e2ddb27f&locationName=Payakumbuh%2C+Sumatera+Barat&lowestLocationLevel=3',
+    'https://id.jobstreet.com/id/Admin-jobs/in-Padang-Sumatera-Barat?sortmode=ListedDate&tags=new'
 ];
 
 async function sendFonnte(message) {
