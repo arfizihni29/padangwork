@@ -225,7 +225,18 @@ async function scrape() {
     console.log(`New jobs to send: ${newJobs.length}`);
 
     if (newJobs.length > 0) {
-        let message = `🚀 *SEMANGAT TERUS PEJUANG RUPIAH!* 🚀\n\nBerikut loker terbaru (super fresh) untuk area Padang, Solok, & Sumbar:\n\n`;
+        const quotes = [
+            "SEMANGAT TERUS PEJUANG RUPIAH!",
+            "REZEKI NGGAK AKAN KETUKAR, GAS APPLY!",
+            "HARI BARU, PELUANG BARU. YUK BISA!",
+            "JANGAN MENYERAH, KESUKSESAN ADA DI DEPAN MATA!",
+            "TETAP SEMANGAT, USAHA TIDAK AKAN MENGKHIANATI HASIL!",
+            "YUK APPLY SEKARANG, SIAPA TAHU INI REZEKI KAMU!",
+            "BISMILLAH, SEMOGA HARI INI BAWA KABAR BAIK!"
+        ];
+        const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+
+        let message = `🚀 *${randomQuote}* 🚀\n\nBerikut loker terbaru (super fresh) untuk area Padang, Solok, Jambi, Payakumbuh & Sumbar:\n\n`;
         let count = 0;
         
         for (let i = 0; i < newJobs.length; i++) {
@@ -235,9 +246,11 @@ async function scrape() {
             
             // Fonnte limit batch size to avoid overly long messages, bumped to 40 per bubble to keep it in one chat bubble mostly
             if (count % 40 === 0 || i === newJobs.length - 1) {
-                message += `_Jangan menyerah, rezeki nggak akan ketukar! Gas apply sekarang! 🔥_\n`;
+                message += `\n🤖 _This bot was Created by Arfi_\n`;
                 await sendFonnte(message);
-                message = `🚀 *LOKER TERBARU (LANJUTAN)* 🚀\n\n`;
+                
+                const nextQuote = quotes[Math.floor(Math.random() * quotes.length)];
+                message = `🚀 *${nextQuote} (LANJUTAN)* 🚀\n\n`;
             }
         }
         
