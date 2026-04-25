@@ -115,6 +115,12 @@ async function scrape() {
 
                     if (!isFresh) continue;
                     
+                    // Filter out 'sales' jobs
+                    if (containerText && containerText.includes('sales')) {
+                        continue;
+                    }
+                    
+
                     // Extract salary
                     let salary = 'Gaji tidak ditampilkan';
                     if (rawContainerText) {
