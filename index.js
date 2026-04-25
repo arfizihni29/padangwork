@@ -12,7 +12,8 @@ const URLS = [
     'https://id.jobstreet.com/id/jobs/in-Sumatera-Barat',
     'https://id.jobstreet.com/id/jobs/in-Sumatera-Barat?tags=new',
     'https://id.jobstreet.com/id/Admin-jobs/in-Sumatera-Barat?tags=new',
-    'https://pintarnya.com/l-kota-padang-lowongan?sort=-published_at&search=&city_id=69&province_id=-1'
+    'https://pintarnya.com/l-kota-padang-lowongan?sort=-published_at&search=&city_id=69&province_id=-1',
+    'https://glints.com/id/opportunities/jobs/explore?country=ID&locationId=3c420344-8d9d-48a5-80e9-80e8a1617acd&locationName=Solok%2C+Sumatera+Barat&lowestLocationLevel=3&sortBy=LATEST'
 ];
 
 async function sendFonnte(message) {
@@ -75,24 +76,26 @@ async function scrape() {
                     if (!href) continue;
 
                     // Get context text to find date
-                    let containerText = '';
+                    let rawContainerText = '';
                     if (isGlints) {
                         let card = a.closest('div[class*="JobCard"]');
-                        if (card) containerText = card.innerText.toLowerCase();
+                        if (card) rawContainerText = card.innerText;
                     } else if (isPintarnya) {
                         // Pintarnya uses simple divs or cards
                         let card = a.parentElement && a.parentElement.parentElement;
-                        if (card) containerText = card.innerText.toLowerCase();
+                        if (card) rawContainerText = card.innerText;
                     } else {
                         let article = a.closest('article');
-                        if (article) containerText = article.innerText.toLowerCase();
+                        if (article) rawContainerText = article.innerText;
                     }
 
-                    if (!containerText) {
-                        containerText = (a.parentElement && a.parentElement.parentElement) 
-                            ? a.parentElement.parentElement.innerText.toLowerCase() 
+                    if (!rawContainerText) {
+                        rawContainerText = (a.parentElement && a.parentElement.parentElement) 
+                            ? a.parentElement.parentElement.innerText
                             : '';
                     }
+
+                    let containerText = rawContainerText.toLowerCase();
 
                     // Freshness filter: max 4 days old
                     let isFresh = true;
@@ -112,18 +115,26 @@ async function scrape() {
 
                     if (!isFresh) continue;
                     
+                    // Extract salary
+                    let salary = 'Gaji tidak ditampilkan';
+                    if (rawContainerText) {
+                        const lines = rawContainerText.split(/\n|\|/);
+                        const salLine = lines.find(l => l.toUpperCase().includes('RP') || l.toUpperCase().includes('IDR'));
+                        if (salLine) salary = salLine.trim();
+                    }
+                    
                     if (isGlints) {
                         if (href.includes('/opportunities/jobs/') && !href.includes('/explore')) {
-                            results.push({ title: text.split('\n')[0], link: href });
+                            results.push({ title: text.split('\n')[0], link: href, salary });
                         }
                     } else if (isPintarnya) {
                         if (href.includes('/lowongan/')) {
                             // pintarnya titles are sometimes separated by newline
-                            results.push({ title: text.split('\n')[0], link: href });
+                            results.push({ title: text.split('\n')[0], link: href, salary });
                         }
                     } else {
                         if (href.includes('/job/')) {
-                             results.push({ title: text, link: href });
+                             results.push({ title: text, link: href, salary });
                         }
                     }
                 }
@@ -173,18 +184,19 @@ async function scrape() {
     console.log(`New jobs to send: ${newJobs.length}`);
 
     if (newJobs.length > 0) {
-        let message = `*Info Loker Terbaru Padang & Sumbar*\n\n`;
+        let message = `🚀 *SEMANGAT TERUS PEJUANG RUPIAH!* 🚀\n\nBerikut loker terbaru (super fresh) untuk area Padang, Solok, & Sumbar:\n\n`;
         let count = 0;
         
         for (let i = 0; i < newJobs.length; i++) {
             const job = newJobs[i];
-            message += `${i+1}. *${job.title}*\nLink: ${job.cleanLink}\n\n`;
+            message += `${i+1}. *${job.title}*\n💰 ${job.salary || 'Gaji tidak ditampilkan'}\n🔗 Link: ${job.cleanLink}\n\n`;
             count++;
             
             // Fonnte limit batch size to avoid overly long messages
             if (count % 10 === 0 || i === newJobs.length - 1) {
+                message += `_Jangan menyerah, rezeki nggak akan ketukar! Gas apply sekarang! 🔥_\n`;
                 await sendFonnte(message);
-                message = `*Info Loker Terbaru Padang & Sumbar (Lanjutan)*\n\n`;
+                message = `🚀 *LOKER TERBARU (LANJUTAN)* 🚀\n\n`;
             }
         }
         
