@@ -70,6 +70,40 @@ async function scrape() {
                     const text = a.innerText.trim();
                     const href = a.href;
                     if (!href) continue;
+
+                    // Get context text to find date
+                    let containerText = '';
+                    if (isGlints) {
+                        let card = a.closest('div[class*="JobCard"]');
+                        if (card) containerText = card.innerText.toLowerCase();
+                    } else {
+                        let article = a.closest('article');
+                        if (article) containerText = article.innerText.toLowerCase();
+                    }
+
+                    if (!containerText) {
+                        containerText = (a.parentElement && a.parentElement.parentElement) 
+                            ? a.parentElement.parentElement.innerText.toLowerCase() 
+                            : '';
+                    }
+
+                    // Freshness filter: max 4 days old
+                    let isFresh = true;
+                    if (containerText) {
+                        if (containerText.includes('bulan') || containerText.includes('month') || 
+                            containerText.includes('tahun') || containerText.includes('year') ||
+                            containerText.includes('minggu') || containerText.includes('week') ||
+                            containerText.includes('30+ hari') || containerText.includes('30+d')) {
+                            isFresh = false;
+                        } else {
+                            let match = containerText.match(/(\d+)\s*(hari|day|d\s+ago)/);
+                            if (match && parseInt(match[1]) > 4) {
+                                isFresh = false;
+                            }
+                        }
+                    }
+
+                    if (!isFresh) continue;
                     
                     if (isGlints) {
                         if (href.includes('/opportunities/jobs/') && !href.includes('/explore')) {
