@@ -189,11 +189,11 @@ async function scrape() {
         
         for (let i = 0; i < newJobs.length; i++) {
             const job = newJobs[i];
-            message += `${i+1}. *${job.title}*\n💰 ${job.salary || 'Gaji tidak ditampilkan'}\n🔗 Link: ${job.cleanLink}\n\n`;
+            message += `🏢 *${i+1}. ${job.title}*\n💰 ${job.salary || 'Gaji tidak ditampilkan'}\n🔗 ${job.cleanLink}\n\n`;
             count++;
             
-            // Fonnte limit batch size to avoid overly long messages
-            if (count % 10 === 0 || i === newJobs.length - 1) {
+            // Fonnte limit batch size to avoid overly long messages, bumped to 40 per bubble to keep it in one chat bubble mostly
+            if (count % 40 === 0 || i === newJobs.length - 1) {
                 message += `_Jangan menyerah, rezeki nggak akan ketukar! Gas apply sekarang! 🔥_\n`;
                 await sendFonnte(message);
                 message = `🚀 *LOKER TERBARU (LANJUTAN)* 🚀\n\n`;
