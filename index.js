@@ -373,13 +373,17 @@ async function scrape() {
             try {
                 const page = await screenshotBrowser.newPage();
                 await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
-                await page.setViewport({ width: 1280, height: 900 });
+                await page.setViewport({ width: 1400, height: 1200 });
                 
                 await page.goto(jobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
                 await new Promise(r => setTimeout(r, 3000)); // tunggu halaman render
 
-                // Scroll sedikit ke bawah supaya konten utama terlihat
-                await page.evaluate(() => window.scrollBy(0, 100));
+                // Zoom out halaman supaya lebih banyak konten yang kelihatan
+                await page.evaluate(() => {
+                    document.body.style.transform = 'scale(0.65)';
+                    document.body.style.transformOrigin = 'top left';
+                    document.body.style.width = '153%'; // 1/0.65 ≈ 153%
+                });
                 await new Promise(r => setTimeout(r, 500));
 
                 const screenshotPath = path.join(SCREENSHOTS_DIR, `job_${i}.png`);
