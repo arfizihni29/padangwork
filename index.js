@@ -3,6 +3,8 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 puppeteer.use(StealthPlugin());
 const fs = require('fs');
 const axios = require('axios');
+const FormData = require('form-data');
+const path = require('path');
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
@@ -12,6 +14,8 @@ console.log('=== TELEGRAM CONFIG CHECK ===');
 console.log('TELEGRAM_TOKEN ada?', !!TELEGRAM_TOKEN);
 console.log('TELEGRAM_CHAT_ID ada?', !!TELEGRAM_CHAT_ID, '| nilai:', TELEGRAM_CHAT_ID);
 console.log('=============================');
+
+const SCREENSHOTS_DIR = path.join(__dirname, 'screenshots');
 
 const URLS = [
     'https://glints.com/id/opportunities/jobs/explore?keyword=admin&country=ID&locationId=5e666aa8-abfd-4d4a-a02e-2caaef368a09&locationName=Padang%2C+Sumatera+Barat&lowestLocationLevel=3&sortBy=LATEST',
@@ -61,6 +65,33 @@ async function sendTelegram(message) {
     }
 }
 
+async function sendTelegramPhoto(photoPath, caption) {
+    if (!TELEGRAM_TOKEN || !TELEGRAM_CHAT_ID) {
+        console.log("❌ Telegram Token atau Chat ID TIDAK ADA di environment.");
+        return false;
+    }
+
+    try {
+        const form = new FormData();
+        form.append('chat_id', TELEGRAM_CHAT_ID);
+        form.append('photo', fs.createReadStream(photoPath));
+        form.append('caption', caption.substring(0, 1024)); // Telegram caption limit
+        form.append('parse_mode', 'HTML');
+
+        const response = await axios.post(
+            `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendPhoto`,
+            form,
+            { headers: form.getHeaders(), timeout: 30000 }
+        );
+        console.log('📸 Foto terkirim ke Telegram!');
+        return true;
+    } catch (error) {
+        const errData = error.response ? error.response.data : error.message;
+        console.error('❌ GAGAL kirim foto Telegram:', JSON.stringify(errData));
+        return false;
+    }
+}
+
 function cleanUrl(url) {
     try {
         const u = new URL(url);
@@ -69,6 +100,16 @@ function cleanUrl(url) {
         return u.toString();
     } catch (e) {
         return url;
+    }
+}
+
+function cleanupScreenshots() {
+    if (fs.existsSync(SCREENSHOTS_DIR)) {
+        const files = fs.readdirSync(SCREENSHOTS_DIR);
+        for (const file of files) {
+            fs.unlinkSync(path.join(SCREENSHOTS_DIR, file));
+        }
+        console.log(`🧹 ${files.length} screenshot dibersihkan.`);
     }
 }
 
@@ -308,7 +349,58 @@ async function scrape() {
     console.log(`New jobs to send: ${newJobs.length}`);
 
     if (newJobs.length > 0) {
-        const TELEGRAM_MAX_CHARS = 3800; // safe buffer di bawah 4096
+        // === FASE SCREENSHOT: buka setiap halaman loker baru & ambil screenshot ===
+        console.log('\n📸 Memulai proses screenshot loker baru...');
+        if (!fs.existsSync(SCREENSHOTS_DIR)) fs.mkdirSync(SCREENSHOTS_DIR);
+
+        const screenshotBrowser = await puppeteer.launch({
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-blink-features=AutomationControlled',
+                '--window-size=1280,900'
+            ],
+            headless: true,
+            ignoreHTTPSErrors: true
+        });
+
+        for (let i = 0; i < newJobs.length; i++) {
+            const job = newJobs[i];
+            const jobUrl = job.link; // pakai link asli (bukan cleanLink) supaya halaman bisa dibuka
+            console.log(`  📷 [${i+1}/${newJobs.length}] Screenshot: ${job.title}`);
+            
+            try {
+                const page = await screenshotBrowser.newPage();
+                await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+                await page.setViewport({ width: 1280, height: 900 });
+                
+                await page.goto(jobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+                await new Promise(r => setTimeout(r, 3000)); // tunggu halaman render
+
+                // Scroll sedikit ke bawah supaya konten utama terlihat
+                await page.evaluate(() => window.scrollBy(0, 100));
+                await new Promise(r => setTimeout(r, 500));
+
+                const screenshotPath = path.join(SCREENSHOTS_DIR, `job_${i}.png`);
+                await page.screenshot({ path: screenshotPath, fullPage: false });
+                job.screenshotPath = screenshotPath;
+                console.log(`    ✅ Screenshot tersimpan: job_${i}.png`);
+
+                await page.close();
+            } catch (e) {
+                console.error(`    ❌ Gagal screenshot ${job.title}:`, e.message);
+                // Tidak ada screenshotPath = nanti dikirim sebagai teks saja
+            }
+
+            // Jeda 500ms antar screenshot untuk mengurangi beban
+            await new Promise(r => setTimeout(r, 500));
+        }
+
+        await screenshotBrowser.close();
+        console.log('📸 Proses screenshot selesai.\n');
+
+        // === FASE KIRIM KE TELEGRAM ===
         const quotes = [
             "SEMANGAT TERUS PEJUANG RUPIAH!",
             "REZEKI NGGAK AKAN KETUKAR, GAS APPLY!",
@@ -318,45 +410,45 @@ async function scrape() {
             "YUK APPLY SEKARANG, SIAPA TAHU INI REZEKI KAMU!",
             "BISMILLAH, SEMOGA HARI INI BAWA KABAR BAIK!"
         ];
+        const q = quotes[Math.floor(Math.random() * quotes.length)];
 
-        const getHeader = () => {
-            const q = quotes[Math.floor(Math.random() * quotes.length)];
-            return `🚀 <b>${q}</b> 🚀\n\nBerikut <b>${newJobs.length} loker terbaru</b> (maks 5 hari) untuk area Padang, Solok, Jambi, Payakumbuh, Pekanbaru, Batam & Sumbar:\n\n`;
-        };
-        const FOOTER = `\n🤖 <i>This bot was Created by Arfi</i>\n`;
+        // 1. Kirim pesan header dulu
+        const headerMsg = `🚀 <b>${q}</b> 🚀\n\nDitemukan <b>${newJobs.length} loker terbaru</b> (maks 5 hari) untuk area Padang, Solok, Jambi, Payakumbuh, Pekanbaru, Batam & Sumbar!\n\nBerikut detail masing-masing loker 👇\n\n🤖 <i>Bot Loker by Arfi</i>`;
+        await sendTelegram(headerMsg);
+        await new Promise(r => setTimeout(r, 1000));
 
-        let message = getHeader();
-        let batchNum = 1;
-
+        // 2. Kirim setiap loker sebagai foto + caption
         for (let i = 0; i < newJobs.length; i++) {
             const job = newJobs[i];
             const safeTitle = job.title.replace(/[<>]/g, '');
-            const jobLine = `🏢 <b>${i+1}. ${safeTitle}</b>\n💰 ${job.salary || 'Gaji tidak ditampilkan'}\n🔗 ${job.cleanLink}\n\n`;
+            const caption = `🏢 <b>${i+1}/${newJobs.length}. ${safeTitle}</b>\n💰 ${job.salary || 'Gaji tidak ditampilkan'}\n🔗 ${job.cleanLink}`;
 
-            // Kalau penambahan job ini akan melebihi limit, kirim dulu pesannya lalu reset
-            if ((message + jobLine + FOOTER).length > TELEGRAM_MAX_CHARS) {
-                message += FOOTER;
-                await sendTelegram(message);
-                await new Promise(r => setTimeout(r, 1000)); // jeda 1 detik antar pesan
-                batchNum++;
-                message = getHeader();
+            if (job.screenshotPath && fs.existsSync(job.screenshotPath)) {
+                // Kirim sebagai foto
+                const success = await sendTelegramPhoto(job.screenshotPath, caption);
+                if (!success) {
+                    // Fallback ke teks kalau foto gagal
+                    await sendTelegram(caption);
+                }
+            } else {
+                // Tidak ada screenshot, kirim sebagai teks biasa
+                await sendTelegram(caption);
             }
 
-            message += jobLine;
-
-            // Kirim batch terakhir
-            if (i === newJobs.length - 1) {
-                message += FOOTER;
-                await sendTelegram(message);
-            }
+            // Jeda 1.5 detik antar pesan supaya tidak kena rate limit Telegram
+            await new Promise(r => setTimeout(r, 1500));
         }
 
+        // 3. Update history
         newJobs.forEach(j => sentJobs.push(j.cleanLink));
         fs.writeFileSync('sent_jobs.json', JSON.stringify(sentJobs, null, 2));
-        console.log(`sent_jobs.json updated. Total ${batchNum} pesan dikirim.`);
+        console.log(`sent_jobs.json updated. Total ${newJobs.length} loker dikirim dengan foto.`);
+
+        // 4. Bersihkan screenshot
+        cleanupScreenshots();
     } else {
         console.log("Tidak ada loker baru. Mengirim notifikasi ke Telegram...");
-        await sendTelegram(`😔 <b>BELUM ADA LOKER YANG TERSEDIA UNTUK SAAT INI</b>\n\nTenang, kami terus memantau dan akan memberitahu kamu segera jika ada lowongan baru!\n\n🤖 <i>This bot was Created by Arfi</i>`);
+        await sendTelegram(`😔 <b>BELUM ADA LOKER YANG TERSEDIA UNTUK SAAT INI</b>\n\nTenang, kami terus memantau dan akan memberitahu kamu segera jika ada lowongan baru!\n\n🤖 <i>Bot Loker by Arfi</i>`);
     }
 }
 
