@@ -254,6 +254,9 @@ async function scrape() {
         newJobs.forEach(j => sentJobs.push(j.cleanLink));
         fs.writeFileSync('sent_jobs.json', JSON.stringify(sentJobs, null, 2));
         console.log("sent_jobs.json updated.");
+    } else {
+        console.log("Tidak ada loker baru. Mengirim notifikasi ke Telegram...");
+        await sendTelegram(`😔 <b>BELUM ADA LOKER YANG TERSEDIA UNTUK SAAT INI</b>\n\nTenang, kami terus memantau dan akan memberitahu kamu segera jika ada lowongan baru!\n\n🤖 <i>This bot was Created by Arfi</i>`);
     }
 }
 
