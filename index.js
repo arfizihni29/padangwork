@@ -5,6 +5,12 @@ const axios = require('axios');
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
+// Debug: cek apakah secrets terbaca
+console.log('=== TELEGRAM CONFIG CHECK ===');
+console.log('TELEGRAM_TOKEN ada?', !!TELEGRAM_TOKEN);
+console.log('TELEGRAM_CHAT_ID ada?', !!TELEGRAM_CHAT_ID, '| nilai:', TELEGRAM_CHAT_ID);
+console.log('=============================');
+
 const URLS = [
     'https://glints.com/id/opportunities/jobs/explore?keyword=admin&country=ID&locationId=5e666aa8-abfd-4d4a-a02e-2caaef368a09&locationName=Padang%2C+Sumatera+Barat&lowestLocationLevel=3&sortBy=LATEST',
     'https://glints.com/id/opportunities/jobs/explore?keyword=marketing&country=ID&locationId=5e666aa8-abfd-4d4a-a02e-2caaef368a09&locationName=Padang%2C+Sumatera+Barat&lowestLocationLevel=3&sortBy=LATEST',
@@ -24,7 +30,7 @@ const URLS = [
 
 async function sendTelegram(message) {
     if (!TELEGRAM_TOKEN || !TELEGRAM_CHAT_ID) {
-        console.log("Telegram Token atau Chat ID belum diset. Melewati pengiriman pesan...");
+        console.log("❌ Telegram Token atau Chat ID TIDAK ADA di environment. Cek GitHub Secrets!");
         return;
     }
     
@@ -34,9 +40,10 @@ async function sendTelegram(message) {
             text: message,
             parse_mode: 'HTML'
         });
-        console.log('Telegram Response:', response.data.ok);
+        console.log('✅ Telegram terkirim! Response OK:', response.data.ok);
     } catch (error) {
-        console.error('Error sending to Telegram:', error.response ? error.response.data : error.message);
+        const errData = error.response ? error.response.data : error.message;
+        console.error('❌ GAGAL kirim Telegram:', JSON.stringify(errData));
     }
 }
 
