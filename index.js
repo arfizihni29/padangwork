@@ -29,7 +29,16 @@ const URLS = [
     'https://id.jobstreet.com/id/Admin-jobs/in-Padang-Sumatera-Barat?sortmode=ListedDate&tags=new',
     'https://glints.com/id/opportunities/jobs/explore?keyword=RESEARCH+AND+DEVELOPMENT&country=ID&locationId=16cbbddf-c3fe-4ca5-a8ff-08ae52c9f085&locationName=Sumatera+Barat&lowestLocationLevel=2&sortBy=LATEST',
     'https://glints.com/id/opportunities/jobs/explore?keyword=admin&country=ID&locationId=79c660ef-ab9a-44e5-9f9d-623a766e5b72&locationName=Pekanbaru%2C+Riau&sortBy=LATEST',
-    'https://glints.com/id/opportunities/jobs/explore?keyword=Social+Media&country=ID&locationId=79c660ef-ab9a-44e5-9f9d-623a766e5b72&locationName=Pekanbaru%2C+Riau&lowestLocationLevel=3&sortBy=LATEST'
+    'https://glints.com/id/opportunities/jobs/explore?keyword=Social+Media&country=ID&locationId=79c660ef-ab9a-44e5-9f9d-623a766e5b72&locationName=Pekanbaru%2C+Riau&lowestLocationLevel=3&sortBy=LATEST',
+    'https://id.jobstreet.com/id/social-media-jobs/in-Pekanbaru-Riau',
+    'https://id.jobstreet.com/id/Content-Writer-jobs/in-Pekanbaru-Riau?sortmode=ListedDate',
+    'https://id.jobstreet.com/id/creative-content-creator-jobs/in-Pekanbaru-Riau?sortmode=ListedDate',
+    'https://glints.com/id/opportunities/jobs/explore?keyword=Content+Creator&country=ID&locationId=79c660ef-ab9a-44e5-9f9d-623a766e5b72&locationName=Pekanbaru%2C+Riau&lowestLocationLevel=3&sortBy=LATEST',
+    'https://glints.com/id/opportunities/jobs/explore?keyword=data&country=ID&locationId=79c660ef-ab9a-44e5-9f9d-623a766e5b72&locationName=Pekanbaru%2C+Riau&lowestLocationLevel=3',
+    'https://glints.com/id/opportunities/jobs/explore?keyword=data&country=ID&locationId=79c660ef-ab9a-44e5-9f9d-623a766e5b72&locationName=Pekanbaru%2C+Riau&lowestLocationLevel=3&sortBy=LATEST',
+    'https://glints.com/id/opportunities/jobs/explore?keyword=data&country=ID&locationId=16cbbddf-c3fe-4ca5-a8ff-08ae52c9f085&locationName=Sumatera+Barat&lowestLocationLevel=2&sortBy=LATEST',
+    'https://glints.com/id/opportunities/jobs/explore?keyword=marketing&country=ID&locationId=16cbbddf-c3fe-4ca5-a8ff-08ae52c9f085&locationName=Sumatera+Barat&lowestLocationLevel=2&sortBy=LATEST',
+    'https://pintarnya.com/q-admin-l-kota-pekanbaru-lowongan?sort=-recommend&gender_options=2&search=admin&city_id=85&province_id=-1'
 ];
 
 async function sendTelegram(message) {
@@ -311,7 +320,7 @@ async function scrape() {
 
         const getHeader = () => {
             const q = quotes[Math.floor(Math.random() * quotes.length)];
-            return `🚀 <b>${q}</b> 🚀\n\nBerikut loker terbaru (super fresh) untuk area Padang, Solok, Jambi, Payakumbuh, Pekanbaru & Sumbar:\n\n`;
+            return `🚀 <b>${q}</b> 🚀\n\nBerikut <b>${newJobs.length} loker terbaru</b> (maks 5 hari) untuk area Padang, Solok, Jambi, Payakumbuh, Pekanbaru & Sumbar:\n\n`;
         };
         const FOOTER = `\n🤖 <i>This bot was Created by Arfi</i>\n`;
 
