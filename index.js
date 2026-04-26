@@ -32,7 +32,7 @@ async function sendTelegram(message) {
         const response = await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
             chat_id: TELEGRAM_CHAT_ID,
             text: message,
-            parse_mode: 'Markdown'
+            parse_mode: 'HTML'
         });
         console.log('Telegram Response:', response.data.ok);
     } catch (error) {
@@ -232,22 +232,22 @@ async function scrape() {
         ];
         const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
-        let message = `🚀 *${randomQuote}* 🚀\n\nBerikut loker terbaru (super fresh) untuk area Padang, Solok, Jambi, Payakumbuh & Sumbar:\n\n`;
+        let message = `🚀 <b>${randomQuote}</b> 🚀\n\nBerikut loker terbaru (super fresh) untuk area Padang, Solok, Jambi, Payakumbuh & Sumbar:\n\n`;
         let count = 0;
         
         for (let i = 0; i < newJobs.length; i++) {
             const job = newJobs[i];
-            const safeTitle = job.title.replace(/[*_`\[\]]/g, '');
-            message += `🏢 *${i+1}. ${safeTitle}*\n💰 ${job.salary || 'Gaji tidak ditampilkan'}\n🔗 ${job.cleanLink}\n\n`;
+            const safeTitle = job.title.replace(/[<>]/g, ''); // hindari tag HTML salah
+            message += `🏢 <b>${i+1}. ${safeTitle}</b>\n💰 ${job.salary || 'Gaji tidak ditampilkan'}\n🔗 ${job.cleanLink}\n\n`;
             count++;
             
             // Telegram limit batch size to avoid overly long messages, bumped to 40 per bubble to keep it in one chat bubble mostly
             if (count % 40 === 0 || i === newJobs.length - 1) {
-                message += `\n🤖 _This bot was Created by Arfi_\n`;
+                message += `\n🤖 <i>This bot was Created by Arfi</i>\n`;
                 await sendTelegram(message);
                 
                 const nextQuote = quotes[Math.floor(Math.random() * quotes.length)];
-                message = `🚀 *${nextQuote} (LANJUTAN)* 🚀\n\n`;
+                message = `🚀 <b>${nextQuote} (LANJUTAN)</b> 🚀\n\n`;
             }
         }
         
