@@ -171,22 +171,19 @@ async function scrape() {
 
                         let containerText = rawContainerText.toLowerCase();
 
-                        // Freshness filter: max 4 days old (more precise)
+                        // ⏰ Freshness filter: SUPER FRESH — max 2 hari saja
                         let isFresh = true;
                         if (containerText) {
-                            // Definitely old: months/years old
+                            // Buang yang sudah berbulan/bertahun/berminggu
                             if (containerText.match(/\d+\s*(bulan|month|tahun|year)/) ||
-                                containerText.includes('30+ hari') || containerText.includes('30+d')) {
+                                containerText.includes('30+ hari') || containerText.includes('30+d') ||
+                                containerText.match(/[1-9]\d*\s*(minggu|week)/)) {
                                 isFresh = false;
                             }
-                            // Check "X minggu" / "X week" — only skip if >= 1 week
-                            else if (containerText.match(/[1-9]\d*\s*(minggu|week)/)) {
-                                isFresh = false;
-                            }
-                            // Check "X hari" / "X day" — skip if > 4
+                            // Buang jika lebih dari 2 hari
                             else {
                                 let match = containerText.match(/(\d+)\s*(hari|day|d\s+ago|d ago)/);
-                                if (match && parseInt(match[1]) > 4) {
+                                if (match && parseInt(match[1]) > 2) {
                                     isFresh = false;
                                 }
                             }
@@ -207,13 +204,14 @@ async function scrape() {
                             title.includes('supir')
                         ) continue;
                         
-                        // Filter out jobs strictly for males (check title first, then card)
+                        // 👩 Filter gender KETAT: hanya loker untuk wanita atau netral
                         const checkText = (title + ' ' + containerText);
-                        if ((checkText.includes('pria') || checkText.includes('laki-laki') || checkText.includes('laki laki') || checkText.includes('cowok'))) {
-                            if (!checkText.includes('wanita') && !checkText.includes('perempuan') && !checkText.includes('cewek')) {
-                                continue;
-                            }
-                        }
+                        const adaMentionCewe = checkText.includes('wanita') || checkText.includes('perempuan') || checkText.includes('cewek');
+                        const adaMentionCowo = checkText.includes('pria') || checkText.includes('laki-laki') || checkText.includes('laki laki') || checkText.includes('cowok');
+
+                        // Kalau ada mention laki-laki tanpa mention wanita → buang
+                        if (adaMentionCowo && !adaMentionCewe) continue;
+                        // Kalau ada mention KEDUANYA (pria DAN wanita) → tetap boleh lolos
 
                         // Extract salary
                         let salary = 'Gaji tidak ditampilkan';
