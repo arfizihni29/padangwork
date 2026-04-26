@@ -1,4 +1,6 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+puppeteer.use(StealthPlugin());
 const fs = require('fs');
 const axios = require('axios');
 
@@ -59,9 +61,19 @@ function cleanUrl(url) {
 }
 
 async function scrape() {
+    const isCI = !!process.env.GITHUB_ACTIONS;
+    console.log('Berjalan di GitHub Actions?', isCI);
+
     const browser = await puppeteer.launch({ 
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-        headless: true 
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-blink-features=AutomationControlled',
+            '--window-size=1280,900'
+        ],
+        headless: true,
+        ignoreHTTPSErrors: true
     });
 
     let allJobs = [];
@@ -81,15 +93,16 @@ async function scrape() {
             });
 
             try {
-                await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+                await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90000 });
                 
-                // Wait extra for JS-heavy pages (Glints, Kitalulus)
+                // Tunggu lebih lama di GitHub Actions karena server cloud lebih lambat
                 const isGlints = url.includes('glints.com');
                 const isKitaLulus = url.includes('kitalulus.com');
+                const baseDelay = isCI ? 6000 : 3000;
                 if (isGlints || isKitaLulus) {
-                    await new Promise(r => setTimeout(r, 4000));
+                    await new Promise(r => setTimeout(r, baseDelay + 2000));
                 } else {
-                    await new Promise(r => setTimeout(r, 2000));
+                    await new Promise(r => setTimeout(r, baseDelay));
                 }
 
                 // Scroll down to trigger lazy-loading of job cards
