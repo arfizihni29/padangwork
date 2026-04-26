@@ -298,6 +298,7 @@ async function scrape() {
     console.log(`New jobs to send: ${newJobs.length}`);
 
     if (newJobs.length > 0) {
+        const TELEGRAM_MAX_CHARS = 3800; // safe buffer di bawah 4096
         const quotes = [
             "SEMANGAT TERUS PEJUANG RUPIAH!",
             "REZEKI NGGAK AKAN KETUKAR, GAS APPLY!",
@@ -307,30 +308,42 @@ async function scrape() {
             "YUK APPLY SEKARANG, SIAPA TAHU INI REZEKI KAMU!",
             "BISMILLAH, SEMOGA HARI INI BAWA KABAR BAIK!"
         ];
-        const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
-        let message = `🚀 <b>${randomQuote}</b> 🚀\n\nBerikut loker terbaru (super fresh) untuk area Padang, Solok, Jambi, Payakumbuh & Sumbar:\n\n`;
-        let count = 0;
-        
+        const getHeader = () => {
+            const q = quotes[Math.floor(Math.random() * quotes.length)];
+            return `🚀 <b>${q}</b> 🚀\n\nBerikut loker terbaru (super fresh) untuk area Padang, Solok, Jambi, Payakumbuh & Sumbar:\n\n`;
+        };
+        const FOOTER = `\n🤖 <i>This bot was Created by Arfi</i>\n`;
+
+        let message = getHeader();
+        let batchNum = 1;
+
         for (let i = 0; i < newJobs.length; i++) {
             const job = newJobs[i];
-            const safeTitle = job.title.replace(/[<>]/g, ''); // hindari tag HTML salah
-            message += `🏢 <b>${i+1}. ${safeTitle}</b>\n💰 ${job.salary || 'Gaji tidak ditampilkan'}\n🔗 ${job.cleanLink}\n\n`;
-            count++;
-            
-            // Telegram limit batch size to avoid overly long messages, bumped to 40 per bubble to keep it in one chat bubble mostly
-            if (count % 40 === 0 || i === newJobs.length - 1) {
-                message += `\n🤖 <i>This bot was Created by Arfi</i>\n`;
+            const safeTitle = job.title.replace(/[<>]/g, '');
+            const jobLine = `🏢 <b>${i+1}. ${safeTitle}</b>\n💰 ${job.salary || 'Gaji tidak ditampilkan'}\n🔗 ${job.cleanLink}\n\n`;
+
+            // Kalau penambahan job ini akan melebihi limit, kirim dulu pesannya lalu reset
+            if ((message + jobLine + FOOTER).length > TELEGRAM_MAX_CHARS) {
+                message += FOOTER;
                 await sendTelegram(message);
-                
-                const nextQuote = quotes[Math.floor(Math.random() * quotes.length)];
-                message = `🚀 <b>${nextQuote} (LANJUTAN)</b> 🚀\n\n`;
+                await new Promise(r => setTimeout(r, 1000)); // jeda 1 detik antar pesan
+                batchNum++;
+                message = getHeader();
+            }
+
+            message += jobLine;
+
+            // Kirim batch terakhir
+            if (i === newJobs.length - 1) {
+                message += FOOTER;
+                await sendTelegram(message);
             }
         }
-        
+
         newJobs.forEach(j => sentJobs.push(j.cleanLink));
         fs.writeFileSync('sent_jobs.json', JSON.stringify(sentJobs, null, 2));
-        console.log("sent_jobs.json updated.");
+        console.log(`sent_jobs.json updated. Total ${batchNum} pesan dikirim.`);
     } else {
         console.log("Tidak ada loker baru. Mengirim notifikasi ke Telegram...");
         await sendTelegram(`😔 <b>BELUM ADA LOKER YANG TERSEDIA UNTUK SAAT INI</b>\n\nTenang, kami terus memantau dan akan memberitahu kamu segera jika ada lowongan baru!\n\n🤖 <i>This bot was Created by Arfi</i>`);
