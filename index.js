@@ -173,7 +173,7 @@ async function scrape() {
 
                         let containerText = rawContainerText.toLowerCase();
 
-                        // ⏰ Freshness filter: SUPER FRESH — max 2 hari saja
+                        // ⏰ Freshness filter: SUPER FRESH — max 5 hari saja
                         let isFresh = true;
                         if (containerText) {
                             // Buang yang sudah berbulan/bertahun/berminggu
@@ -182,10 +182,10 @@ async function scrape() {
                                 containerText.match(/[1-9]\d*\s*(minggu|week)/)) {
                                 isFresh = false;
                             }
-                            // Buang jika lebih dari 2 hari
+                            // Buang jika lebih dari 5 hari
                             else {
                                 let match = containerText.match(/(\d+)\s*(hari|day|d\s+ago|d ago)/);
-                                if (match && parseInt(match[1]) > 2) {
+                                if (match && parseInt(match[1]) > 5) {
                                     isFresh = false;
                                 }
                             }
