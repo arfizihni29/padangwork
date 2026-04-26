@@ -27,7 +27,9 @@ const URLS = [
     'https://glints.com/id/opportunities/jobs/explore?keyword=Admin&country=ID&locationId=f34ea55b-a896-4156-8477-5db45491bac6&locationName=Jambi&lowestLocationLevel=2&sortBy=LATEST',
     'https://glints.com/id/opportunities/jobs/explore?keyword=Admin&country=ID&locationId=5738028d-c59b-402e-93ba-a289e2ddb27f&locationName=Payakumbuh%2C+Sumatera+Barat&lowestLocationLevel=3',
     'https://id.jobstreet.com/id/Admin-jobs/in-Padang-Sumatera-Barat?sortmode=ListedDate&tags=new',
-    'https://glints.com/id/opportunities/jobs/explore?keyword=RESEARCH+AND+DEVELOPMENT&country=ID&locationId=16cbbddf-c3fe-4ca5-a8ff-08ae52c9f085&locationName=Sumatera+Barat&lowestLocationLevel=2&sortBy=LATEST'
+    'https://glints.com/id/opportunities/jobs/explore?keyword=RESEARCH+AND+DEVELOPMENT&country=ID&locationId=16cbbddf-c3fe-4ca5-a8ff-08ae52c9f085&locationName=Sumatera+Barat&lowestLocationLevel=2&sortBy=LATEST',
+    'https://glints.com/id/opportunities/jobs/explore?keyword=admin&country=ID&locationId=79c660ef-ab9a-44e5-9f9d-623a766e5b72&locationName=Pekanbaru%2C+Riau&sortBy=LATEST',
+    'https://glints.com/id/opportunities/jobs/explore?keyword=Social+Media&country=ID&locationId=79c660ef-ab9a-44e5-9f9d-623a766e5b72&locationName=Pekanbaru%2C+Riau&lowestLocationLevel=3&sortBy=LATEST'
 ];
 
 async function sendTelegram(message) {
@@ -309,7 +311,7 @@ async function scrape() {
 
         const getHeader = () => {
             const q = quotes[Math.floor(Math.random() * quotes.length)];
-            return `🚀 <b>${q}</b> 🚀\n\nBerikut loker terbaru (super fresh) untuk area Padang, Solok, Jambi, Payakumbuh & Sumbar:\n\n`;
+            return `🚀 <b>${q}</b> 🚀\n\nBerikut loker terbaru (super fresh) untuk area Padang, Solok, Jambi, Payakumbuh, Pekanbaru & Sumbar:\n\n`;
         };
         const FOOTER = `\n🤖 <i>This bot was Created by Arfi</i>\n`;
 
