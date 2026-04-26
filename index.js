@@ -53,134 +53,191 @@ function cleanUrl(url) {
 
 async function scrape() {
     const browser = await puppeteer.launch({ 
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
         headless: true 
     });
-    const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36');
 
     let allJobs = [];
 
     for (let url of URLS) {
         console.log(`Scraping: ${url}`);
-        try {
-            await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
-            
-            const jobs = await page.evaluate((currentUrl) => {
-                const isGlints = currentUrl.includes('glints.com');
-                const isPintarnya = currentUrl.includes('pintarnya.com');
-                const isKitaLulus = currentUrl.includes('kitalulus.com');
-                let results = [];
-                const links = document.querySelectorAll('a');
-                for (let a of links) {
-                    const text = a.innerText.trim();
-                    const href = a.href;
-                    if (!href) continue;
+        let retries = 2;
+        while (retries >= 0) {
+            const page = await browser.newPage();
+            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+            await page.setViewport({ width: 1280, height: 900 });
+            // Block images/fonts to speed up scraping
+            await page.setRequestInterception(true);
+            page.on('request', req => {
+                if (['image', 'font', 'media'].includes(req.resourceType())) req.abort();
+                else req.continue();
+            });
 
-                    // Get context text to find date
-                    let rawContainerText = '';
-                    if (isGlints) {
-                        let card = a.closest('div[class*="JobCard"]');
-                        if (card) rawContainerText = card.innerText;
-                    } else if (isPintarnya) {
-                        // Pintarnya uses simple divs or cards
-                        let card = a.parentElement && a.parentElement.parentElement;
-                        if (card) rawContainerText = card.innerText;
-                    } else if (isKitaLulus) {
-                        rawContainerText = a.innerText;
-                    } else {
-                        let article = a.closest('article');
-                        if (article) rawContainerText = article.innerText;
-                    }
+            try {
+                await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+                
+                // Wait extra for JS-heavy pages (Glints, Kitalulus)
+                const isGlints = url.includes('glints.com');
+                const isKitaLulus = url.includes('kitalulus.com');
+                if (isGlints || isKitaLulus) {
+                    await new Promise(r => setTimeout(r, 4000));
+                } else {
+                    await new Promise(r => setTimeout(r, 2000));
+                }
 
-                    if (!rawContainerText) {
-                        rawContainerText = (a.parentElement && a.parentElement.parentElement) 
-                            ? a.parentElement.parentElement.innerText
-                            : '';
-                    }
+                // Scroll down to trigger lazy-loading of job cards
+                await page.evaluate(async () => {
+                    await new Promise(resolve => {
+                        let totalHeight = 0;
+                        const distance = 400;
+                        const timer = setInterval(() => {
+                            window.scrollBy(0, distance);
+                            totalHeight += distance;
+                            if (totalHeight >= 5000) {
+                                clearInterval(timer);
+                                resolve();
+                            }
+                        }, 150);
+                    });
+                });
+                await new Promise(r => setTimeout(r, 1500));
 
-                    let containerText = rawContainerText.toLowerCase();
+                const jobs = await page.evaluate((currentUrl) => {
+                    const isGlints = currentUrl.includes('glints.com');
+                    const isPintarnya = currentUrl.includes('pintarnya.com');
+                    const isKitaLulus = currentUrl.includes('kitalulus.com');
+                    let results = [];
+                    const links = document.querySelectorAll('a');
 
-                    // Freshness filter: max 4 days old
-                    let isFresh = true;
-                    if (containerText) {
-                        if (containerText.includes('bulan') || containerText.includes('month') || 
-                            containerText.includes('tahun') || containerText.includes('year') ||
-                            containerText.includes('minggu') || containerText.includes('week') ||
-                            containerText.includes('30+ hari') || containerText.includes('30+d')) {
-                            isFresh = false;
+                    for (let a of links) {
+                        const text = a.innerText.trim();
+                        const href = a.href;
+                        if (!href || !text) continue;
+
+                        // Get context card text
+                        let rawContainerText = '';
+                        if (isGlints) {
+                            // Try multiple selector strategies for Glints
+                            let card = a.closest('[class*="JobCard"]') 
+                                    || a.closest('[class*="job-card"]')
+                                    || a.closest('[class*="Card"]')
+                                    || a.closest('li')
+                                    || a.closest('article');
+                            if (card) rawContainerText = card.innerText;
+                        } else if (isPintarnya) {
+                            let card = a.closest('[class*="card"]') 
+                                    || a.closest('[class*="job"]')
+                                    || a.closest('li')
+                                    || (a.parentElement && a.parentElement.parentElement);
+                            if (card) rawContainerText = card.innerText;
+                        } else if (isKitaLulus) {
+                            let card = a.closest('[class*="card"]')
+                                    || a.closest('[class*="job"]')
+                                    || a.closest('li')
+                                    || a.closest('article');
+                            if (card) rawContainerText = card.innerText;
+                            else rawContainerText = a.innerText;
                         } else {
-                            let match = containerText.match(/(\d+)\s*(hari|day|d\s+ago)/);
-                            if (match && parseInt(match[1]) > 4) {
+                            // JobStreet
+                            let article = a.closest('article') || a.closest('[data-id]') || a.closest('li');
+                            if (article) rawContainerText = article.innerText;
+                        }
+
+                        if (!rawContainerText) {
+                            rawContainerText = (a.parentElement && a.parentElement.parentElement) 
+                                ? a.parentElement.parentElement.innerText
+                                : '';
+                        }
+
+                        let containerText = rawContainerText.toLowerCase();
+
+                        // Freshness filter: max 4 days old (more precise)
+                        let isFresh = true;
+                        if (containerText) {
+                            // Definitely old: months/years old
+                            if (containerText.match(/\d+\s*(bulan|month|tahun|year)/) ||
+                                containerText.includes('30+ hari') || containerText.includes('30+d')) {
                                 isFresh = false;
+                            }
+                            // Check "X minggu" / "X week" — only skip if >= 1 week
+                            else if (containerText.match(/[1-9]\d*\s*(minggu|week)/)) {
+                                isFresh = false;
+                            }
+                            // Check "X hari" / "X day" — skip if > 4
+                            else {
+                                let match = containerText.match(/(\d+)\s*(hari|day|d\s+ago|d ago)/);
+                                if (match && parseInt(match[1]) > 4) {
+                                    isFresh = false;
+                                }
+                            }
+                        }
+                        if (!isFresh) continue;
+                        
+                        // Filter out unwanted jobs
+                        const title = text.split('\n')[0].toLowerCase();
+                        if (
+                            title.includes('sales') ||
+                            title.includes('penagihan') ||
+                            title.includes('field collection') ||
+                            title.includes('office boy') ||
+                            title.includes('cleaning service') ||
+                            title.includes('kolektor') ||
+                            title.includes('collector') ||
+                            title.includes('driver') ||
+                            title.includes('supir')
+                        ) continue;
+                        
+                        // Filter out jobs strictly for males (check title first, then card)
+                        const checkText = (title + ' ' + containerText);
+                        if ((checkText.includes('pria') || checkText.includes('laki-laki') || checkText.includes('laki laki') || checkText.includes('cowok'))) {
+                            if (!checkText.includes('wanita') && !checkText.includes('perempuan') && !checkText.includes('cewek')) {
+                                continue;
+                            }
+                        }
+
+                        // Extract salary
+                        let salary = 'Gaji tidak ditampilkan';
+                        if (rawContainerText) {
+                            const lines = rawContainerText.split(/\n|\|/);
+                            const salLine = lines.find(l => /rp[\s\d]|idr[\s\d]/i.test(l));
+                            if (salLine) salary = salLine.trim().substring(0, 60);
+                        }
+                        
+                        if (isGlints) {
+                            if (href.includes('/opportunities/jobs/') && !href.includes('/explore')) {
+                                results.push({ title: text.split('\n')[0].trim(), link: href, salary });
+                            }
+                        } else if (isPintarnya) {
+                            if (href.includes('/lowongan/')) {
+                                results.push({ title: text.split('\n')[0].trim(), link: href, salary });
+                            }
+                        } else if (isKitaLulus) {
+                            if (href.includes('/lowongan/')) {
+                                results.push({ title: text.split('\n')[0].trim(), link: href, salary });
+                            }
+                        } else {
+                            // JobStreet
+                            if (href.includes('/job/')) {
+                                results.push({ title: text.split('\n')[0].trim(), link: href, salary });
                             }
                         }
                     }
-
-                    if (!isFresh) continue;
-                    
-                    // Filter out unwanted jobs
-                    if (containerText && (
-                        containerText.includes('sales') ||
-                        containerText.includes('penagihan') ||
-                        containerText.includes('field collection') ||
-                        containerText.includes('officeboy') ||
-                        containerText.includes('office boy') ||
-                        containerText.includes('cleaning service') ||
-                        containerText.includes('kolektor') ||
-                        containerText.includes('collector')
-                    )) {
-                        continue;
-                    }
-                    
-                    // Filter out jobs meant strictly for males
-                    if (containerText && (
-                        containerText.includes('pria') || 
-                        containerText.includes('laki-laki') || 
-                        containerText.includes('laki laki') || 
-                        containerText.includes('cowok')
-                    )) {
-                        if (!containerText.includes('wanita') && 
-                            !containerText.includes('perempuan') && 
-                            !containerText.includes('cewek')) {
-                            continue; // It only asks for males, so skip
-                        }
-                    }
-                    
-
-                    // Extract salary
-                    let salary = 'Gaji tidak ditampilkan';
-                    if (rawContainerText) {
-                        const lines = rawContainerText.split(/\n|\|/);
-                        const salLine = lines.find(l => l.toUpperCase().includes('RP') || l.toUpperCase().includes('IDR'));
-                        if (salLine) salary = salLine.trim();
-                    }
-                    
-                    if (isGlints) {
-                        if (href.includes('/opportunities/jobs/') && !href.includes('/explore')) {
-                            results.push({ title: text.split('\n')[0], link: href, salary });
-                        }
-                    } else if (isPintarnya) {
-                        if (href.includes('/lowongan/')) {
-                            // pintarnya titles are sometimes separated by newline
-                            results.push({ title: text.split('\n')[0], link: href, salary });
-                        }
-                    } else if (isKitaLulus) {
-                        if (href.includes('/lowongan/')) {
-                            results.push({ title: text.split('\n')[0], link: href, salary });
-                        }
-                    } else {
-                        if (href.includes('/job/')) {
-                             results.push({ title: text, link: href, salary });
-                        }
-                    }
+                    return results;
+                }, url);
+                
+                console.log(`  → ${jobs.length} loker ditemukan dari ${url}`);
+                allJobs = allJobs.concat(jobs);
+                await page.close();
+                break; // success, exit retry loop
+            } catch (e) {
+                console.error(`Error scraping ${url} (sisa retry: ${retries}):`, e.message);
+                await page.close();
+                retries--;
+                if (retries >= 0) {
+                    console.log(`  → Mencoba ulang...`);
+                    await new Promise(r => setTimeout(r, 3000));
                 }
-                return results;
-            }, url);
-            
-            allJobs = allJobs.concat(jobs);
-        } catch (e) {
-            console.error(`Error scraping ${url}:`, e.message);
+            }
         }
     }
 
