@@ -38,7 +38,8 @@ const URLS = [
     'https://glints.com/id/opportunities/jobs/explore?keyword=data&country=ID&locationId=79c660ef-ab9a-44e5-9f9d-623a766e5b72&locationName=Pekanbaru%2C+Riau&lowestLocationLevel=3&sortBy=LATEST',
     'https://glints.com/id/opportunities/jobs/explore?keyword=data&country=ID&locationId=16cbbddf-c3fe-4ca5-a8ff-08ae52c9f085&locationName=Sumatera+Barat&lowestLocationLevel=2&sortBy=LATEST',
     'https://glints.com/id/opportunities/jobs/explore?keyword=marketing&country=ID&locationId=16cbbddf-c3fe-4ca5-a8ff-08ae52c9f085&locationName=Sumatera+Barat&lowestLocationLevel=2&sortBy=LATEST',
-    'https://pintarnya.com/q-admin-l-kota-pekanbaru-lowongan?sort=-recommend&gender_options=2&search=admin&city_id=85&province_id=-1'
+    'https://pintarnya.com/q-admin-l-kota-pekanbaru-lowongan?sort=-recommend&gender_options=2&search=admin&city_id=85&province_id=-1',
+    'https://glints.com/id/opportunities/jobs/explore?keyword=E-Commerce&country=ID&locationId=654dbd43-0da6-44a1-8fa6-3f2879b8fbdf&locationName=Batam%2C+Kepulauan+Riau&lowestLocationLevel=3&sortBy=LATEST'
 ];
 
 async function sendTelegram(message) {
@@ -320,7 +321,7 @@ async function scrape() {
 
         const getHeader = () => {
             const q = quotes[Math.floor(Math.random() * quotes.length)];
-            return `🚀 <b>${q}</b> 🚀\n\nBerikut <b>${newJobs.length} loker terbaru</b> (maks 5 hari) untuk area Padang, Solok, Jambi, Payakumbuh, Pekanbaru & Sumbar:\n\n`;
+            return `🚀 <b>${q}</b> 🚀\n\nBerikut <b>${newJobs.length} loker terbaru</b> (maks 5 hari) untuk area Padang, Solok, Jambi, Payakumbuh, Pekanbaru, Batam & Sumbar:\n\n`;
         };
         const FOOTER = `\n🤖 <i>This bot was Created by Arfi</i>\n`;
 
